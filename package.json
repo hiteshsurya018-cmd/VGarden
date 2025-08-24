@@ -14,7 +14,9 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "db:seed": "node prisma/seed.js"
+    "db:seed": "node prisma/seed.js",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist/spa"
   },
   "dependencies": {
     "@prisma/client": "^5.7.0",
@@ -82,6 +84,7 @@
     "eslint": "^8.55.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
+    "gh-pages": "^6.3.0",
     "nodemon": "^3.0.2",
     "postcss": "^8.4.32",
     "prisma": "^5.7.0",

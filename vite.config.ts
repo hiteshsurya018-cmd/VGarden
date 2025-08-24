@@ -10,8 +10,9 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
   },
   build: {
-    outDir: "dist/spa",
+    outDir: "dist/spa", // ✅ your custom output folder
   },
+  base: "/VGarden/", // ✅ REQUIRED for GitHub Pages
   plugins: [react()],
   resolve: {
     alias: {
@@ -27,8 +28,6 @@ function expressPlugin(): Plugin {
     apply: "serve", // Only apply during development (serve mode)
     configureServer(server) {
       const app = createServer();
-
-      // Add Express app as middleware to Vite dev server
       server.middlewares.use(app);
     },
   };
