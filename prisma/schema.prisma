@@ -1,0 +1,270 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String   @unique
+  password  String?
+  firstName String?
+  lastName  String?
+  avatar    String?
+  
+  // OAuth fields
+  googleId  String?  @unique
+  appleId   String?  @unique
+  
+  // Profile
+  level     Int      @default(1)
+  experience Int     @default(0)
+  coins     Int      @default(100)
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  gardens     Garden[]
+  purchases   Purchase[]
+  achievements UserAchievement[]
+  friends     User[]   @relation("UserFriends")
+  friendOf    User[]   @relation("UserFriends")
+  
+  @@map("users")
+}
+
+model Garden {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  isPublic    Boolean  @default(false)
+  
+  // Garden Layout Data
+  layoutData  Json?    // Stores the AI-generated garden layout
+  imageUrl    String?  // Original uploaded image
+  width       Float?   // Garden dimensions
+  height      Float?
+  
+  // Garden Stats
+  plantsCount Int      @default(0)
+  level       Int      @default(1)
+  experience  Int      @default(0)
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plants      PlantInstance[]
+  
+  @@map("gardens")
+}
+
+model PlantSpecies {
+  id            String  @id @default(cuid())
+  name          String  @unique
+  scientificName String?
+  category      String  // herb, flower, vegetable, tree, etc.
+  
+  // Plant Characteristics
+  description   String?
+  careLevel     String  // easy, medium, hard
+  sunlight      String  // full, partial, shade
+  watering      String  // low, medium, high
+  soilType      String?
+  growthTime    Int?    // days to maturity
+  harvestYield  Int?    // coins/experience per harvest
+  
+  // Visual
+  imageUrl      String?
+  color         String?
+  size          String? // small, medium, large
+  
+  // Store
+  seedPrice     Int?    // cost in coins
+  isAvailable   Boolean @default(true)
+  rarity        String  @default("common") // common, rare, epic, legendary
+  
+  // AI Recognition
+  aiModelId     String? // Reference to AI model plant ID
+  confidence    Float?  // Recognition confidence threshold
+  
+  // Timestamps
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relations
+  plantInstances PlantInstance[]
+  storeItems     StoreItem[]
+  
+  @@map("plant_species")
+}
+
+model PlantInstance {
+  id         String   @id @default(cuid())
+  
+  // Position in garden
+  x          Float
+  y          Float
+  z          Float?   @default(0)
+  rotation   Float?   @default(0)
+  scale      Float?   @default(1)
+  
+  // Plant State
+  growthStage Int     @default(0) // 0-100
+  health      Int     @default(100) // 0-100
+  waterLevel  Int     @default(50) // 0-100
+  lastWatered DateTime?
+  lastHarvested DateTime?
+  
+  // AI Detection Data
+  detectionData Json? // Bounding box, confidence, etc.
+  isAIDetected Boolean @default(false)
+  
+  // Timestamps
+  plantedAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  // Relations
+  gardenId   String
+  garden     Garden @relation(fields: [gardenId], references: [id], onDelete: Cascade)
+  speciesId  String
+  species    PlantSpecies @relation(fields: [speciesId], references: [id])
+  
+  @@map("plant_instances")
+}
+
+model StoreCategory {
+  id          String @id @default(cuid())
+  name        String @unique
+  description String?
+  iconUrl     String?
+  sortOrder   Int    @default(0)
+  
+  // Relations
+  items       StoreItem[]
+  
+  @@map("store_categories")
+}
+
+model StoreItem {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  price       Int     // in coins
+  imageUrl    String?
+  itemType    String  // seed, decoration, boost, tool
+  
+  // Item Properties
+  properties  Json?   // Special properties, effects, etc.
+  isAvailable Boolean @default(true)
+  isLimited   Boolean @default(false)
+  stock       Int?    // null = unlimited
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  categoryId  String
+  category    StoreCategory @relation(fields: [categoryId], references: [id])
+  speciesId   String?
+  species     PlantSpecies? @relation(fields: [speciesId], references: [id])
+  purchases   Purchase[]
+  
+  @@map("store_items")
+}
+
+model Purchase {
+  id          String   @id @default(cuid())
+  quantity    Int      @default(1)
+  totalPrice  Int
+  
+  // Payment
+  paymentMethod String? // coins, stripe, razorpay
+  paymentId   String?  // External payment ID
+  status      String   @default("completed") // pending, completed, failed
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  userId      String
+  user        User @relation(fields: [userId], references: [id])
+  itemId      String
+  item        StoreItem @relation(fields: [itemId], references: [id])
+  
+  @@map("purchases")
+}
+
+model Achievement {
+  id          String @id @default(cuid())
+  name        String @unique
+  description String
+  iconUrl     String?
+  
+  // Requirements
+  type        String // plant_count, garden_level, harvest_count, etc.
+  target      Int    // Target value to unlock
+  reward      Json   // Coins, experience, items, etc.
+  
+  // Relations
+  userAchievements UserAchievement[]
+  
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String   @id @default(cuid())
+  unlockedAt    DateTime @default(now())
+  progress      Int      @default(0)
+  isCompleted   Boolean  @default(false)
+  
+  // Relations
+  userId        String
+  user          User @relation(fields: [userId], references: [id])
+  achievementId String
+  achievement   Achievement @relation(fields: [achievementId], references: [id])
+  
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
+}
+
+model AIAnalysis {
+  id            String   @id @default(cuid())
+  
+  // Input
+  imageUrl      String
+  imageMetadata Json?    // Width, height, format, etc.
+  
+  // AI Processing
+  plantNetData  Json?    // PlantNet API response
+  yoloData      Json?    // YOLOv8 detection results
+  samData       Json?    // Segment Anything results
+  
+  // Output
+  gardenLayout  Json     // Final processed garden layout
+  confidence    Float    // Overall confidence score
+  processingTime Int     // Processing time in milliseconds
+  
+  // Status
+  status        String   @default("processing") // processing, completed, failed
+  errorMessage  String?
+  
+  // Timestamps
+  createdAt     DateTime @default(now())
+  completedAt   DateTime?
+  
+  @@map("ai_analyses")
+}
